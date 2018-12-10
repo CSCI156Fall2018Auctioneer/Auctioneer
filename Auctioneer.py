@@ -8,7 +8,7 @@ def Main():
     modeChosen = False
     while not modeChosen:
         # Choose operating mode
-        mode = input("Which mode would you like to run? Type client or server:\n\r|>")
+        mode = raw_input("Which mode would you like to run? Type client or server:\n\r|>")
 
         # Ensure they entered one of the choices
         if "CLIENT" in mode.upper() or "SERVER" in mode.upper():
