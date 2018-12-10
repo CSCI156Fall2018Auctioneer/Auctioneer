@@ -1,6 +1,6 @@
+# Import Classes
 from Client import *
 from Server import *
-
 
 def Main():
 
@@ -20,17 +20,13 @@ def Main():
                 client = Client()
                 # TODO Build a menu for functions to test
 
+                """
                 print("Client Menu:")
                 print("1 - Set Server IP Address")
                 print("2 - Set Bidding Chance")
                 print("3 - Set Max Bid Price")
                 clientChoice = input("Choose from above (1 - 3)\n\r|>")
-
-                if clientChoice is 1:
-                    #
-                elif clientChoice is 2:
-
-                elif clientChoice is 3:
+                """
 
 
             elif "SERVER" in mode.upper():

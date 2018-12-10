@@ -43,25 +43,26 @@ class Server:
             print('Connected with ' + addr[0] + ':' + str(addr[1]))
 
             # start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-            threading.Thread(target=self.ClientThread).start()
+            connectionThread = threading.Thread(target=self.ClientThread, args=(conn,))
+            connectionThread.start()
 
         s.close()
 
     # Function for handling connections. This will be used to create threads
-    def ClientThread(conn):
+    def ClientThread(self, conn):
         # Sending message to connected client
-        conn.send('Welcome to the server. Type something and hit enter\n')  # send only takes string
+        conn.send(b'Welcome to the server. Type something and hit enter\n')  # send only takes string
 
         # infinite loop so that function do not terminate and thread do not end.
         while True:
 
             # Receiving from client
-            data = conn.recv(1024)
-            reply = 'OK...' + data
+            data = conn.recv(9999)
+            reply = 'OK...' + repr(data)
             if not data:
                 break
 
-            conn.sendall(reply)
+            conn.sendall(reply.encode())
 
         # came out of loop
         conn.close()

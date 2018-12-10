@@ -8,8 +8,6 @@ class Client:
         # Declare class vars
         self.host = 'localhost'
         self.port = 8888
-        self.
-
 
         print("Starting Client mode...")
 
@@ -22,6 +20,7 @@ class Client:
 
         # Initiate the connection to the server
         self.Connect()
+        self.SendData()
 
 
     # Returns the Remote IP address when given a hostname.
@@ -49,9 +48,11 @@ class Client:
 
         try:
             # Set the whole string
-            self.sock.sendall(message)
+            self.sock.sendall(message.encode())
+            print('Message send successfully')
         except socket.error:
             # Send failed
             print('Send failed')
 
-        print('Message send successfully')
+        response = self.sock.recv(1024)
+        print("Server response = " + repr(response))
