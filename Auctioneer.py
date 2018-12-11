@@ -1,6 +1,6 @@
 # Import Classes
-from Client import *
-from Server import *
+from client import *
+from server import *
 
 def Main():
 

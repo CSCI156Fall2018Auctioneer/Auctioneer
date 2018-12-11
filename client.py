@@ -1,5 +1,5 @@
 import socket
-
+from objects import *
 
 class Client:
 
@@ -20,7 +20,7 @@ class Client:
 
         # Initiate the connection to the server
         self.Connect()
-        self.SendData()
+        self.Register()
 
 
     # Returns the Remote IP address when given a hostname.
@@ -42,17 +42,15 @@ class Client:
 
 
     # To be called outside
-    def SendData(self):
-        # Send some data to remote server
-        message = "Hello Server!"
+    def Register(self):
 
         try:
-            # Set the whole string
-            self.sock.sendall(message.encode())
+            # Send Register command to the server
+            self.sock.sendall(EnumClientCommands.REGISTER.encode())
             print('Message send successfully')
         except socket.error:
             # Send failed
             print('Send failed')
 
         response = self.sock.recv(1024)
-        print("Server response = " + repr(response))
+        print("Server response: " + repr(response))

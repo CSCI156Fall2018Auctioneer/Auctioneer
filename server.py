@@ -1,7 +1,7 @@
 import socket
 import sys
 import threading
-
+from objects import *
 
 class Server:
     
@@ -11,7 +11,10 @@ class Server:
         self.host = ''
         # Arbitrary unused port number
         self.port = 8888
-
+        # Set the Server State
+        self.state = EnumServerState.REGISTERING
+        # Dictionary of Clients, accessed by "IP:Port"
+        self.Clients = {}
         # Create the Socket, bind the server, and wait for incoming connections
         self.CreateAndBindSocket()
 
@@ -36,35 +39,30 @@ class Server:
         self.sock.listen(10)
         print('Socket now listening')
 
-        # now keep talking with the client
+        # Continue to handle incoming Client connections
         while 1:
             # wait to accept a connection - blocking call
             conn, addr = self.sock.accept()
-            print('Connected with ' + addr[0] + ':' + str(addr[1]))
-
             # start new thread takes 1st argument as a function name to be run, second is the tuple of arguments to the function.
-            connectionThread = threading.Thread(target=self.ClientThread, args=(conn,))
-            connectionThread.start()
-
-        s.close()
+            threading.Thread(target=self.ClientThread, args=(conn, addr,)).start()
 
     # Function for handling connections. This will be used to create threads
-    def ClientThread(self, conn):
-        # Sending message to connected client
-        conn.send(b'Welcome to the server. Type something and hit enter\n')  # send only takes string
+    def ClientThread(self, conn, addr):
 
-        # infinite loop so that function do not terminate and thread do not end.
-        while True:
+        # Get the key of this connection
+        ipPort = addr[0] + ':' + str(addr[1])
+        # Receiving from client
+        data = conn.recv(1024)
+        # Convert to string
+        dataStr = repr(data)
 
-            # Receiving from client
-            data = conn.recv(9999)
-            reply = 'OK...' + repr(data)
-            if not data:
-                break
-
-            conn.sendall(reply.encode())
-
-        # came out of loop
-        conn.close()
+        # Handle Clients Registering with the server
+        if EnumClientCommands.REGISTER in dataStr:
+            # Sending message to connected client
+            response = 'You are registered to begin bidding\n'
+            conn.send(response.encode())
+            self.Clients[ipPort] = conn
+            # Show the client has registerd
+            print('Registered bidder from: ' + ipPort)
 
 
