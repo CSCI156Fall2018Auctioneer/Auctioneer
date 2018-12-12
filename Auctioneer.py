@@ -1,6 +1,7 @@
 # Import Classes
 from client import *
 from server import *
+import threading
 
 def Main():
 
@@ -19,14 +20,6 @@ def Main():
 
                 client = Client()
                 # TODO Build a menu for functions to test
-
-                """
-                print("Client Menu:")
-                print("1 - Set Server IP Address")
-                print("2 - Set Bidding Chance")
-                print("3 - Set Max Bid Price")
-                clientChoice = input("Choose from above (1 - 3)\n\r|>")
-                """
 
 
             elif "SERVER" in mode.upper():

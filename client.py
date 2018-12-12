@@ -1,15 +1,25 @@
 import socket
 from objects import *
+import utils
+import time
 
-class Client:
+class Client(object):
 
     def __init__(self):
 
-        # Declare class vars
-        self.host = 'localhost'
-        self.port = 8888
-
+        # Welcome message
         print("Starting Client mode...")
+
+        # Connection Vars
+        # self.host = raw_imput("Enter Server IP: ")
+        self.Host = 'localhost'
+        self.Port = 8888
+
+        # Bidding Chance
+        self.BiddingChance = 0.3
+
+        # Client State
+        self.State = EnumClientState.DISCONNECTED
 
         try:
             # create an AF_INET, STREAM socket (TCP)
@@ -20,7 +30,10 @@ class Client:
 
         # Initiate the connection to the server
         self.Connect()
+        # Send the Registration Request
         self.Register()
+        # Start the bidding Loop
+        self.BiddingLoop()
 
 
     # Returns the Remote IP address when given a hostname.
@@ -37,20 +50,64 @@ class Client:
 
     def Connect(self):
         # Connect to remote server
-        self.sock.connect((self.host, self.port))
-        print('Socket Connected to ' + self.host)
+        try:
+            self.sock.connect((self.Host, self.Port))
+            print('Socket Connected to ' + self.Host)
+            # Update internal state
+            self.State = EnumClientState.CONNECTED
+        except socket.error:
+            # Connection failed
+            print('Connection failed! Exitting...')
+            time.sleep(2)
+            exit(1)
 
-
-    # To be called outside
     def Register(self):
 
         try:
             # Send Register command to the server
-            self.sock.sendall(EnumClientCommands.REGISTER.encode())
+            self.sock.sendall(EnumCommands.REGISTER.encode())
             print('Message send successfully')
+            response = self.sock.recv(1024)
+            print("Server response: " + repr(response))
+            # Set State
+            self.State = EnumClientState.REGISTERED
         except socket.error:
             # Send failed
             print('Send failed')
 
-        response = self.sock.recv(1024)
-        print("Server response: " + repr(response))
+
+    def BiddingLoop(self):
+        # Continue to maintain connection with the server
+        while self.State in [EnumClientState.REGISTERED, EnumClientState.BIDDING, EnumClientState.NOT_BIDDING]:
+
+            # Get the response from the server
+            response = self.sock.recv(1024)
+            # Convert to string
+            responseStr = repr(response)
+
+            if EnumCommands.BROADCAST_START in responseStr:
+                print("Bidding has Started!")
+
+            # If just Registered, Request the latest Item
+            if self.State is EnumClientState.REGISTERED:
+                # Request latest Item
+                self.sock.sendall(EnumCommands.REQUEST.encode())
+
+                # Get the response from the server
+                response = self.sock.recv(1024)
+                # Convert to string
+                responseStr = repr(response)
+            
+                print("Recieved Item from Server: " + responseStr)
+
+
+
+
+
+            # If new, start new bid process
+                # Determine if bidding or not
+                #
+            # else
+
+
+
