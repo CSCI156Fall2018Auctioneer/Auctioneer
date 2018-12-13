@@ -17,7 +17,7 @@ def Main():
         print(",,$$$$$$,,,,,,,,$$$$,,,,,,,,,,$$$$$$            Auctioneer")
         print(",,$$$$$$,,,,,,,,$$$$                            CSCI 156 Project")
         print(",,$$$$$$,,,,,,,,$$$$                            Zachary Scott")
-        print(",,,$$$$$$,,,,,,,$$$$                            Caleb Tenny") 
+        print(",,,$$$$$$,,,,,,,$$$$                            Caleb Tenney") 
         print(",,,,$$$$$$$$,,,,$$$$                            Mason Juarez")
         print(",,,,,,$$$$$$$$$$$$$$$")
         print(",,,,,,,,,,$$$$$$$$$$$$$$$$$")
