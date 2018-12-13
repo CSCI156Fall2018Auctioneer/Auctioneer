@@ -2,7 +2,7 @@ import socket
 import sys
 import threading
 from objects import *
-from time import *
+from time import sleep
 import utils
 
 class Server(object):
@@ -143,7 +143,13 @@ class Server(object):
                 itemName, itemQuantity, itemPrice = self.ItemsForSale.pop(0)
                 # Sell entire stock
                 for i in range(0, itemQuantity, 1):
+                    # Start the timeout for the auction to close
+                    threading.Thread(target=self.AuctionTimeout).start()
+                    # Start selling this item
                     self.SellItem(itemName, itemPrice)
+                    print("SOLD!!! Winner is " + str(self.HighestBidder[0]))
+                    # Broadcast we're starting again
+                    self.BroadCastStart()
 
 
     def BroadCastStart(self):
@@ -157,18 +163,19 @@ class Server(object):
 
     def SellItem(self, name, price):
 
-        while 1:
-            # Send the Item to all clients
-            for clientKey in self.Clients.keys():
-                # Get the socket using the client IP:Port as key
-                socket = self.Clients[clientKey]
-                # Check if the client has requested the item
-                requestStr = utils.GetResponseString(socket)
-                # Check if the request was sent
-                if EnumCommands.REQUEST in requestStr:
-                    print("SellItem() : Got Request for the item")
-                    threading.Thread(target=self.SellThread, args=(clientKey, socket, name, price,)).start()
-
+        # Send the Item to all clients
+        for clientKey in self.Clients.keys():
+            # Get the socket using the client IP:Port as key
+            socket = self.Clients[clientKey]
+            # Check if the client has requested the item
+            requestStr = utils.GetResponseString(socket)
+            # Check if the request was sent
+            if EnumCommands.REQUEST in requestStr:
+                print("SellItem() : Got Request for the item")
+                threading.Thread(target=self.SellThread, args=(clientKey, socket, name, price,)).start()
+        # Spin this loop until the auction ends
+        while self.State is not EnumServerState.CLOSED:
+            x = 1
 
     def SellThread(self, client, socket, name, price):
         # Send the Item Name and the price
@@ -177,13 +184,15 @@ class Server(object):
         # Lock to print safely
         print("Sent item {" + name + "} to client: " + client)
         # Continue to accept their bids, and determine the highest bidder
-        while 1:
+        while self.State is not EnumServerState.CLOSED:
             # See if they bid
-            self.Lock.acquire()
             response = utils.GetResponseString(socket)
             if EnumCommands.BID in response:
+                # Sometimes multiple commands come in, only take the first one
                 if len(response.split(':')) > 2:
-                    print("Oopsie! Too much in the buffer")
+                    # print(" Had to split the command: " + response)
+                    response = '&' + response.split('&')[1]
+                    # print("Response now: " + str(response))
                 else:
                     # Let the client know we got their bid
                     socket.sendall(EnumCommands.BID_RECEIVED.encode())
@@ -191,6 +200,7 @@ class Server(object):
                 bidAmount = int(bidAmount)
                 print("Client " + client + " placed a bid for " + str(bidAmount))
                 # Lock threads while we examine this bid against the current highest
+                self.Lock.acquire()
                 if self.HighestBidder[1] < bidAmount:
                     self.HighestBidder = (client, bidAmount)
                     print("Client " + client + " has the highest bid at " + str(bidAmount))
@@ -202,12 +212,18 @@ class Server(object):
                     message = EnumCommands.OUTBID
                     socket.send(message.encode())
                 self.Lock.release()
-
             else:
                 print("SellThread() : Error with message {" + response + "}")
 
 
-
+    def AuctionTimeout(self):
+        secondsLeft = 5
+        # Wait 10 seconds for the auction to end
+        while secondsLeft > 0:
+            sleep(1)
+            secondsLeft -= 1
+        # Then set the state to Auction Closed
+        self.State = EnumServerState.CLOSED
 
     def KillConnections(self):
         for key, c in self.Clients:

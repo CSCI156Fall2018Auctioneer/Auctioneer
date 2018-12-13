@@ -25,7 +25,7 @@ def RandFloatBetween(x, y):
 
 # Returns the string sent over the wire
 def GetResponseString( socket ):
-    response = socket.recv(1024)
+    response = socket.recv(512)
     responseString = str(repr(response))
     responseString = responseString.replace("'","").replace("\\", "")
     return responseString

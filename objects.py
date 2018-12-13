@@ -33,6 +33,7 @@ class EnumCommands:
     BID_RECEIVED = "&BidReceived"
     HIGHEST_BID = "&HighestBid"
     OUTBID = "&OutBid"
-    BID_CLOSED = "&BidClosed"
+    AUCTION_CLOSED = "&AuctionClosed"
+    NEXT_ITEM = "&NextItem"
 
 

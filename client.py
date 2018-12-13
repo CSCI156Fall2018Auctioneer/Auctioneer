@@ -98,31 +98,32 @@ class Client(object):
                 # Listen for the server
                 response = utils.GetResponseString(self.sock)
 
-                # See if the client is willing to bid based on chance
-                if utils.TryChance(self.BiddingChance):
-                    # Request latest Item
-                    self.sock.sendall(EnumCommands.REQUEST.encode())
-                    print("Asking Server for sale item")
+                if EnumCommands.BROADCAST_START in response:
+                    # See if the client is willing to bid based on chance
+                    if utils.TryChance(self.BiddingChance):
+                        # Request latest Item
+                        self.sock.sendall(EnumCommands.REQUEST.encode())
+                        print("Asking Server for sale item")
 
-                    # Get the response from the server
-                    responseStr = utils.GetResponseString(self.sock)
-                    print("Received Item from Server: " + responseStr)
-                    # Set the state to start bidding
-                    self.State = EnumClientState.BIDDING
-                    # Split out the item name and price
-                    itemName, itemPrice = responseStr.split(':')
-                    # Convert to Int
-                    itemPrice = int(itemPrice)
-                    # Set the base Bidding price
-                    self.CurrentBid = itemPrice
-                    # Determine the max bidding price
-                    percent = utils.RandFloatBetween(1, 10)
-                    self.MaxBid = itemPrice + (itemPrice * percent)
-                    print("Established Max bidding price of " + str(self.MaxBid))
+                        # Get the response from the server
+                        response = utils.GetResponseString(self.sock)
+                        print("Received Item from Server: " + response)
+                        # Set the state to start bidding
+                        self.State = EnumClientState.BIDDING
+                        # Split out the item name and price
+                        itemName, itemPrice = response.split(':')
+                        # Convert to Int
+                        itemPrice = int(itemPrice)
+                        # Set the base Bidding price
+                        self.CurrentBid = itemPrice
+                        # Determine the max bidding price
+                        percent = utils.RandFloatBetween(1, 10)
+                        self.MaxBid = itemPrice + (itemPrice * percent)
+                        print("Established Max bidding price of " + str(self.MaxBid))
 
-                else:
-                    self.State = EnumClientState.NOT_BIDDING
-                    print("Not Bidding on the current item")
+                    else:
+                        self.State = EnumClientState.NOT_BIDDING
+                        print("Not Bidding on the current item")
 
             # Bidding State Handler
             if self.State is EnumClientState.BIDDING:
@@ -142,12 +143,12 @@ class Client(object):
                             print('Failed to send bid. Error code: ' + str(msg[0]) + ' , Error message : ' + msg[1])
 
                         # Get the response from the server after bidding
-                        responseStr = utils.GetResponseString(self.sock)
-                        if EnumCommands.HIGHEST_BID in responseStr:
+                        response = utils.GetResponseString(self.sock)
+                        if EnumCommands.HIGHEST_BID in response and EnumCommands.BID_RECEIVED in response:
                             print("Woohoo, I have the highest bid!")
                             self.State = EnumClientState.NOT_BIDDING
                             break
-                        if EnumCommands.OUTBID in responseStr:
+                        if EnumCommands.OUTBID in response and EnumCommands.BID_RECEIVED in response:
                             print("Outbid by another client! Trying new bid...")
                             continue
                     else:
@@ -155,18 +156,19 @@ class Client(object):
                         self.State = EnumClientState.NOT_BIDDING
                         break
 
-
             if self.State is EnumClientState.NOT_BIDDING:
                 response = utils.GetResponseString(self.sock)
                 # If the current sale closed, we go back to registered, and await a new item
-                if EnumCommands.BID_CLOSED in response:
+                if EnumCommands.AUCTION_CLOSED in response:
                     print("Item was sold by server, back to waiting for next item")
                     self.State = EnumClientState.REGISTERED
                 # If we were outbid, go back to bidding
                 if EnumCommands.OUTBID in response:
                     print("Went from Highest Bidder to being Outbid! Jumping back to bidding....")
                     self.State = EnumClientState.BIDDING
-
+                if EnumCommands.AUCTION_CLOSED in response:
+                    print("Sale ended, requesting next item")
+                    self.State = EnumClientState.REGISTERED
 
 
 
