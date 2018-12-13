@@ -3,10 +3,11 @@ import sys
 import threading
 from objects import *
 from time import *
+import utils
 
 class Server(object):
     
-    def __init__(self):
+    def __init__(self, secondsToStart=15):
 
         # Symbolic name meaning all available interfaces
         self.Host = ''
@@ -14,29 +15,31 @@ class Server(object):
         self.Port = 8888
         # Set the Server State
         self.State = EnumServerState.REGISTERING
+
+
         # Dictionary of Clients, accessed by "IP:Port"
         self.Clients = {}
         # Highest Bidder
         self.HighestBidder = None
-        # Threads
-        self.Threads = []
+
         # Mutex Lock
         self.Lock = threading.Lock()
 
         # Client count to start the bidding
         self.ClientsForBidding = 3
         # Seconds left to start Bidding
-        self.SecondsTilStart = 15
+        self.SecondsTilStart = secondsToStart
 
 
         # List of item tuples
-        self.ItemsForSale = {}
+        self.ItemsForSale = []
 
-        # Test Item ( Name , ( Quantity, Price ) )
-        testItem = ("Item1", (5, 100))
-        self.ItemsForSale[testItem[0]] = testItem[1]
+        # Test Item Triple ( Name , Quantity, Price )
+        testItem = ("Item1", 5, 100)
+        self.ItemsForSale.append(testItem)
 
         # Current Item for Sale
+        self.CurrentItemIndex = 0
         self.CurrentItem = None
 
         # Create the Socket, bind the server, and wait for incoming connections
@@ -80,7 +83,7 @@ class Server(object):
 
     def ListenThread(self):
         # Continue to handle incoming Client connections
-        while 1:
+        while self.State == EnumServerState.REGISTERING:
             # Wait to accept a connection
             conn, addr = self.sock.accept()
             # Name this thread
@@ -109,9 +112,7 @@ class Server(object):
         # Get the key of this connection
         ipPort = addr[0] + ':' + str(addr[1])
         # Receiving from client
-        data = conn.recv(1024)
-        # Convert to string
-        dataStr = repr(data)
+        dataStr = utils.GetResponseString(conn)
 
         # If we've started, reject this client
         if self.State in [EnumServerState.BROADCAST_START, EnumServerState.SELLING]:
@@ -132,8 +133,16 @@ class Server(object):
 
     def OperationLoop(self):
         while 1:
+            # After registration, we broadcast that a new item is going to be sold
             if self.State is EnumServerState.BROADCAST_START:
                 self.BroadCastStart()
+            # Then we begin selling
+            elif self.State is EnumServerState.SELLING:
+                # Get the next item
+                itemName, itemQuantity, itemPrice = self.ItemsForSale.pop(0)
+                # Sell entire stock
+                for i in range(0, itemQuantity, 1):
+                    self.SellItem(itemName, itemPrice)
 
 
     def BroadCastStart(self):
@@ -141,6 +150,40 @@ class Server(object):
         for socket in self.Clients.values():
             message = EnumCommands.BROADCAST_START
             socket.send(message.encode())
+        # Change the state
+        self.State = EnumServerState.SELLING
+
+
+    def SellItem(self, name, price):
+
+        while 1:
+            # Send the Item to all clients
+            for clientKey in self.Clients.keys():
+                # Get the socket using the client IP:Port as key
+                socket = self.Clients[clientKey]
+                # Check if the client has requested the item
+                requestStr = utils.GetResponseString(socket)
+                # Check if the request was sent
+                if EnumCommands.REQUEST in requestStr:
+                    print("SellItem() : Got Request for the item")
+                    threading.Thread(target=self.SellThread, args=(clientKey,socket, name, price,)).start()
+
+
+    def SellThread(self, client, socket, name, price):
+        # Send the Item Name and the price
+        message = name + ":" + str(price)
+        socket.send(message.encode())
+        # Lock to print safely
+        self.Lock.acquire()
+        print("Sent item {" + name + "} to client: " + client)
+        self.Lock.release()
+        # Continue to accept their bids, and determine the highest bidder
+        while 1:
+            # See if they bid
+            response = utils.GetResponseString(socket)
+            if EnumCommands.BID in response:
+                print("Client " + client + " placed a bid!")
+
 
 
     def KillConnections(self):

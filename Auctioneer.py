@@ -27,7 +27,7 @@ def Main():
                 print("Chosen server mode!")
                 modeChosen = True
                 # Start the server
-                server = Server()
+                server = Server(5)
 
         else:
             print("Incorrect choice, try again.")

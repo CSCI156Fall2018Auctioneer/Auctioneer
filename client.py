@@ -15,8 +15,14 @@ class Client(object):
         self.Host = 'localhost'
         self.Port = 8888
 
+
         # Bidding Chance
-        self.BiddingChance = 0.3
+        # TODO - SET TO 0.7 BEFORE TURNING IN
+        self.BiddingChance = 1.0
+        # Current Bid value
+        self.CurrentBid = 0
+        # Max Bid, based on a percent higher than the item price
+        self.MaxBid = 0
 
         # Client State
         self.State = EnumClientState.DISCONNECTED
@@ -33,7 +39,7 @@ class Client(object):
         # Send the Registration Request
         self.Register()
         # Start the bidding Loop
-        self.BiddingLoop()
+        self.OperationLoop()
 
 
     # Returns the Remote IP address when given a hostname.
@@ -67,47 +73,71 @@ class Client(object):
             # Send Register command to the server
             self.sock.sendall(EnumCommands.REGISTER.encode())
             print('Message send successfully')
-            response = self.sock.recv(1024)
-            print("Server response: " + repr(response))
+            response = utils.GetResponseString(self.sock)
+            print("Server response: " + response)
             # Set State
             self.State = EnumClientState.REGISTERED
         except socket.error:
-            # Send failed
-            print('Send failed')
+            # Unable to Register
+            print('Unable to Register! Exiting...')
+            time.sleep(2)
+            exit(1)
 
 
-    def BiddingLoop(self):
+    def OperationLoop(self):
         # Continue to maintain connection with the server
-        while self.State in [EnumClientState.REGISTERED, EnumClientState.BIDDING, EnumClientState.NOT_BIDDING]:
-
-            # Get the response from the server
-            response = self.sock.recv(1024)
-            # Convert to string
-            responseStr = repr(response)
-
-            if EnumCommands.BROADCAST_START in responseStr:
-                print("Bidding has Started!")
+        while self.State in [EnumClientState.REGISTERED, EnumClientState.AUCTION_STARTED, EnumClientState.BIDDING, EnumClientState.NOT_BIDDING]:
 
             # If just Registered, Request the latest Item
             if self.State is EnumClientState.REGISTERED:
-                # Request latest Item
-                self.sock.sendall(EnumCommands.REQUEST.encode())
+
+                # Wait until the auction starts
+                # Listen for the server
+                response = utils.GetResponseString(self.sock)
+
+                # See if the client is willing to bid based on chance
+                if utils.TryChance(self.BiddingChance):
+                    # Request latest Item
+                    self.sock.sendall(EnumCommands.REQUEST.encode())
+                    print("Asking Server for sale item")
+
+                    # Get the response from the server
+                    responseStr = utils.GetResponseString(self.sock)
+                    print("Received Item from Server: " + responseStr)
+                    # Set the state to start bidding
+                    self.State = EnumClientState.BIDDING
+                    # Split out the item name and price
+                    itemName, itemPrice = responseStr.split(':')
+                    # Convert to Int
+                    itemPrice = int(itemPrice)
+                    # Determine the max bidding price
+                    percent = utils.RandFloatBetween(1, 10)
+                    self.MaxBid = itemPrice + (itemPrice * percent)
+                    print("Established Max bidding price of " + str(self.MaxBid))
+
+                else:
+                    self.State = EnumClientState.NOT_BIDDING
+                    print("Not Bidding on the current item")
+
+            # Bidding State Handler
+            if self.State is EnumClientState.BIDDING:
+
+                
 
                 # Get the response from the server
+                responseStr = utils.GetResponseString(self.sock)
+
+
+
+            if self.State is EnumClientState.NOT_BIDDING:
+                time.sleep(1)
                 response = self.sock.recv(1024)
-                # Convert to string
-                responseStr = repr(response)
-            
-                print("Recieved Item from Server: " + responseStr)
+                if response:
+                    rStr = str(repr(response))
+                    # If the current sale closed, we go back to registered, and await a new item
+                    if EnumCommands.BID_CLOSED in rStr:
+                        self.State = EnumClientState.REGISTERED
 
-
-
-
-
-            # If new, start new bid process
-                # Determine if bidding or not
-                #
-            # else
 
 
 

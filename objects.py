@@ -11,8 +11,9 @@ class EnumClientState:
     DISCONNECTED = 0
     CONNECTED = 1
     REGISTERED = 2
-    BIDDING = 3
-    NOT_BIDDING = 4
+    AUCTION_STARTED = 3
+    BIDDING = 4
+    NOT_BIDDING = 5
 
 
 class EnumThreadNames:
@@ -31,5 +32,6 @@ class EnumCommands:
     NEW_ITEM = "&NewItem"
     HIGHEST_BID = "&HighestBid"
     OUTBID = "&OutBid"
+    BID_CLOSED = "&BidClosed"
 
 

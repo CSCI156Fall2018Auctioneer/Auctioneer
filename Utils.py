@@ -18,3 +18,14 @@ def TryChance(probability):
 
 def RandBetween(x, y):
     return random.randint(x, y)
+
+def RandFloatBetween(x, y):
+    intVal = random.randrange(x, y, 1)
+    return float(intVal) / 10
+
+# Returns the string sent over the wire
+def GetResponseString( socket ):
+    response = socket.recv(1024)
+    responseString = str(repr(response))
+    responseString = responseString.replace("'","").replace("\\", "")
+    return responseString
