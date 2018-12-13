@@ -1,7 +1,6 @@
 # Import Classes
 from client import *
 from server import *
-import threading
 
 def Main():
 
@@ -45,9 +44,7 @@ def Main():
                 # Client Mode
                 print("Chosen client mode!")
                 modeChosen = True
-
                 client = Client()
-                # TODO Build a menu for functions to test
 
 
             elif "SERVER" in mode.upper():
@@ -55,7 +52,7 @@ def Main():
                 print("Chosen server mode!")
                 modeChosen = True
                 # Start the server
-                server = Server(5)
+                server = Server(10)
 
         else:
             print("Incorrect choice, try again.")

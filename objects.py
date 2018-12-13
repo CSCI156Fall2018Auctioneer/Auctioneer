@@ -26,10 +26,11 @@ class EnumCommands:
     # ------------ Client Commands ------------
     REGISTER = "&Register"
     REQUEST = "&Request"
-    BID = "&Bid"
+    BID = "&BidPlaced"
     # ------------ Server Commands ------------
     BROADCAST_START = "&StartBidding"
     NEW_ITEM = "&NewItem"
+    BID_RECEIVED = "&BidReceived"
     HIGHEST_BID = "&HighestBid"
     OUTBID = "&OutBid"
     BID_CLOSED = "&BidClosed"

@@ -19,8 +19,8 @@ class Server(object):
 
         # Dictionary of Clients, accessed by "IP:Port"
         self.Clients = {}
-        # Highest Bidder
-        self.HighestBidder = None
+        # Highest Bidder ( Bidder Key, Bid Amount )
+        self.HighestBidder = ("", 0)
 
         # Mutex Lock
         self.Lock = threading.Lock()
@@ -98,10 +98,11 @@ class Server(object):
             else:
                 # Wait one second, and decrease the seconds until start
                 sleep(1)
-                self.SecondsTilStart -= 1
                 # Print every 5 seconds
                 if (self.SecondsTilStart % 5) == 0:
-                    print( str(self.SecondsTilStart) + " seconds left until bidding begins!")
+                    print(str(self.SecondsTilStart) + " seconds left until bidding begins!")
+                self.SecondsTilStart -= 1
+
         if self.SecondsTilStart <= 0:
             self.State = EnumServerState.BROADCAST_START
             print("Bidding has started!")
@@ -166,7 +167,7 @@ class Server(object):
                 # Check if the request was sent
                 if EnumCommands.REQUEST in requestStr:
                     print("SellItem() : Got Request for the item")
-                    threading.Thread(target=self.SellThread, args=(clientKey,socket, name, price,)).start()
+                    threading.Thread(target=self.SellThread, args=(clientKey, socket, name, price,)).start()
 
 
     def SellThread(self, client, socket, name, price):
@@ -174,15 +175,37 @@ class Server(object):
         message = name + ":" + str(price)
         socket.send(message.encode())
         # Lock to print safely
-        self.Lock.acquire()
         print("Sent item {" + name + "} to client: " + client)
-        self.Lock.release()
         # Continue to accept their bids, and determine the highest bidder
         while 1:
             # See if they bid
+            self.Lock.acquire()
             response = utils.GetResponseString(socket)
             if EnumCommands.BID in response:
-                print("Client " + client + " placed a bid!")
+                if len(response.split(':')) > 2:
+                    print("Oopsie! Too much in the buffer")
+                else:
+                    # Let the client know we got their bid
+                    socket.sendall(EnumCommands.BID_RECEIVED.encode())
+                bidCmd, bidAmount = response.split(':')
+                bidAmount = int(bidAmount)
+                print("Client " + client + " placed a bid for " + str(bidAmount))
+                # Lock threads while we examine this bid against the current highest
+                if self.HighestBidder[1] < bidAmount:
+                    self.HighestBidder = (client, bidAmount)
+                    print("Client " + client + " has the highest bid at " + str(bidAmount))
+                    # Let them know they are highest bidder
+                    message = EnumCommands.HIGHEST_BID
+                    socket.send(message.encode())
+                else:
+                    # Let them know they are outbid
+                    message = EnumCommands.OUTBID
+                    socket.send(message.encode())
+                self.Lock.release()
+
+            else:
+                print("SellThread() : Error with message {" + response + "}")
+
 
 
 
