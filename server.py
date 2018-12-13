@@ -139,18 +139,26 @@ class Server(object):
                 self.BroadCastStart()
             # Then we begin selling
             elif self.State is EnumServerState.SELLING:
-                # Get the next item
-                itemName, itemQuantity, itemPrice = self.ItemsForSale.pop(0)
-                # Sell entire stock
-                for i in range(0, itemQuantity, 1):
-                    # Start the timeout for the auction to close
-                    threading.Thread(target=self.AuctionTimeout).start()
-                    # Start selling this item
-                    self.SellItem(itemName, itemPrice)
-                    print("SOLD!!! Winner is " + str(self.HighestBidder[0]))
-                    # Broadcast we're starting again
-                    self.BroadCastStart()
-
+                if len(self.ItemsForSale) > 0:
+                    # Get the next item
+                    itemName, itemQuantity, itemPrice = self.ItemsForSale.pop(0)
+                    # Sell entire stock
+                    for i in range(0, itemQuantity, 1):
+                        # Start the timeout for the auction to close
+                        threading.Thread(target=self.AuctionTimeout).start()
+                        # Start selling this item
+                        self.SellItem(itemName, itemPrice)
+                        print("SOLD!!! Winner is " + str(self.HighestBidder[0]))
+                        sleep(2)
+                        # Update all the clients
+                        for clientKey in self.Clients.keys():
+                            # Get the socket using the client IP:Port as key
+                            socket = self.Clients[clientKey]
+                            socket.sendall(EnumCommands.AUCTION_CLOSED.encode())
+                        self.BroadCastStart()
+                else:
+                    print("Sold all of our stock! Finished executing..")
+                    exit(0)
 
     def BroadCastStart(self):
         # Broadcast to all connected Clients
@@ -212,9 +220,9 @@ class Server(object):
                     message = EnumCommands.OUTBID
                     socket.send(message.encode())
                 self.Lock.release()
-            else:
-                print("SellThread() : Error with message {" + response + "}")
-
+            # Handle this situation where the request comes in before the thread ended
+            if EnumCommands.REQUEST in response:
+                socket.send(EnumCommands.RESEND.encode())
 
     def AuctionTimeout(self):
         secondsLeft = 5

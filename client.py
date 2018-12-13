@@ -89,7 +89,7 @@ class Client(object):
 
     def OperationLoop(self):
         # Continue to maintain connection with the server
-        while self.State in [EnumClientState.REGISTERED, EnumClientState.AUCTION_STARTED, EnumClientState.BIDDING, EnumClientState.NOT_BIDDING]:
+        while self.State in [EnumClientState.REGISTERED, EnumClientState.BIDDING, EnumClientState.NOT_BIDDING]:
 
             # If just Registered, Request the latest Item
             if self.State is EnumClientState.REGISTERED:
@@ -107,7 +107,12 @@ class Client(object):
 
                         # Get the response from the server
                         response = utils.GetResponseString(self.sock)
-                        print("Received Item from Server: " + response)
+                        while EnumCommands.RESEND in response:
+                            # Request latest Item again
+                            self.sock.sendall(EnumCommands.REQUEST.encode())
+                            response = utils.GetResponseString(self.sock)
+                        else:
+                            print("Received Item from Server: " + response)
                         # Set the state to start bidding
                         self.State = EnumClientState.BIDDING
                         # Split out the item name and price
@@ -157,18 +162,19 @@ class Client(object):
                         break
 
             if self.State is EnumClientState.NOT_BIDDING:
-                response = utils.GetResponseString(self.sock)
-                # If the current sale closed, we go back to registered, and await a new item
-                if EnumCommands.AUCTION_CLOSED in response:
-                    print("Item was sold by server, back to waiting for next item")
-                    self.State = EnumClientState.REGISTERED
-                # If we were outbid, go back to bidding
-                if EnumCommands.OUTBID in response:
-                    print("Went from Highest Bidder to being Outbid! Jumping back to bidding....")
-                    self.State = EnumClientState.BIDDING
-                if EnumCommands.AUCTION_CLOSED in response:
-                    print("Sale ended, requesting next item")
-                    self.State = EnumClientState.REGISTERED
+                while 1:
+                    response = utils.GetResponseString(self.sock)
+                    # If the current sale closed, we go back to registered, and await a new item
+                    if EnumCommands.AUCTION_CLOSED in response:
+                        print("Item was sold by server, back to waiting for next item")
+                        self.State = EnumClientState.REGISTERED
+
+                        break
+                    # If we were outbid, go back to bidding
+                    if EnumCommands.OUTBID in response:
+                        print("Went from Highest Bidder to being Outbid! Jumping back to bidding....")
+                        self.State = EnumClientState.BIDDING
+                        break
 
 
 

@@ -35,5 +35,6 @@ class EnumCommands:
     OUTBID = "&OutBid"
     AUCTION_CLOSED = "&AuctionClosed"
     NEXT_ITEM = "&NextItem"
+    RESEND = "&Resend"
 
 
